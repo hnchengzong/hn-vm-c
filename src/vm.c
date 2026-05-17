@@ -193,8 +193,7 @@ void vm_run(vm *restrict vm) {
       case IO_STDIN:
         if (in_offset == 0) {
           vm->reg[dest] = getchar();
-        }
-        if (in_offset == 1) {
+        } else if (in_offset == 1) {
           vm->data_mem[dest % DATA_MEM_SIZE] = getchar();
         } else {
           vm->running = false;
@@ -246,17 +245,13 @@ void vm_run(vm *restrict vm) {
       case IO_STDOUT:
         if (out_offset == 0) {
           fprintf(stdout, "%c", vm->reg[dest]);
-        }
-        if (out_offset == 1) {
+        } else if (out_offset == 1) {
           fprintf(stderr, "%d\n", vm->reg[dest]);
-        }
-        if (out_offset == 2) {
+        } else if (out_offset == 2) {
           vm_print_registers(vm);
-        }
-        if (out_offset == 3) {
+        } else if (out_offset == 3) {
           vm_print_memory(vm);
-        }
-        if (out_offset == 4) {
+        } else if (out_offset == 4) {
           vm_print_stack(vm);
         } else {
           vm->running = false;
@@ -273,13 +268,13 @@ void vm_run(vm *restrict vm) {
         vm->running = false;
         break;
       }
-      vm->stack[vm->sp] = vm->pc;
+      vm->stack[vm->sp] = vm->pc + INSTRUCTION_SIZE;
       vm->sp--;
       vm->pc = dest;
       break;
     case RET:
       if (vm->sp >= STACK_SIZE - VM_STACK_TOP_OFFSET) {
-        fprintf(stderr, "function,s stack underflow!\n");
+        fprintf(stderr, "function's stack underflow!\n");
         vm->running = false;
         break;
       }
@@ -310,7 +305,7 @@ void vm_print_registers(vm *restrict v) {
 
 void vm_print_memory(vm *restrict v) {
   printf("\n===== Memory =====\n");
-  for (u8 i = 0; i < DATA_MEM_SIZE; i++) {
+  for (int i = 0; i < DATA_MEM_SIZE; i++) {
     if (i % 16 == 0)
       printf("\n%3u: ", i);
     printf("%3u ", v->data_mem[i]);
@@ -320,7 +315,7 @@ void vm_print_memory(vm *restrict v) {
 
 void vm_print_stack(vm *restrict v) {
   printf("\n===== Stack =====\n");
-  for (u8 i = 0; i < STACK_SIZE; i++) {
+  for (int i = 0; i < STACK_SIZE; i++) {
     if (i % 16 == 0)
       printf("\n%3u: ", i);
     if (i == v->sp)

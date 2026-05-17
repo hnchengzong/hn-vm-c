@@ -1,5 +1,5 @@
 set_project("hn-vm-c")
-set_version("0.1.1")
+set_version("0.1.2")
 
 set_languages("c11")
 set_toolchains("clang")

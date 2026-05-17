@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+static Label labels[MAX_LABELS];
+static int label_count = 0;
+
 static bool is_number(const char *restrict str) {
   if (!str || *str == '\0')
     return false;
@@ -15,6 +18,19 @@ static bool is_number(const char *restrict str) {
     }
   }
   return true;
+}
+
+static u16 find_label(const char *name) {
+  for (int i = 0; i < label_count; i++) {
+    if (strcmp(labels[i].name, name) == 0) {
+      return labels[i].addr;
+    }
+  }
+  if (is_number(name)) {
+    return (u16)atoi(name);
+  }
+  fprintf(stderr, "undefined label: %s\n", name);
+  exit(EXIT_FAILURE);
 }
 
 op_t get_opcode(const char *restrict name) {
@@ -31,12 +47,12 @@ op_t get_opcode(const char *restrict name) {
 }
 
 u8 parse_operand(const char *restrict str) {
-  if (is_number(str)) {
-    return (u8)atoi(str);
+  if (strcmp(str, "nop") == 0 || strcmp(str, "null") == 0 ||
+      strcmp(str, "nil") == 0 || strcmp(str, "none") == 0) {
+    return 0;
   }
   if (str[0] == 'r' || str[0] == 'R') {
     u8 reg_num = (u8)atoi(str + 1);
-
     if (reg_num > REGISTER_MAX) {
       fprintf(stderr, "error:register must be r0~r%d,you input:%s\n",
               REGISTER_MAX, str);
@@ -44,14 +60,13 @@ u8 parse_operand(const char *restrict str) {
     }
     return reg_num;
   }
-  fprintf(stderr, "Invalid operand: %s\n", str);
-  return 0;
+  return (u8)find_label(str);
 }
 
 void assemble(const char *restrict asm_file_path,
               const char *restrict bin_file_path) {
   InstrBuffer mem_instr[ASSEMBLE_MAX_SIZE];
-  int instr_cnt = 0;
+  int instr_count = 0;
 
   FILE *const asm_file = fopen(asm_file_path, "rb");
   FILE *const bin_file = fopen(bin_file_path, "wb");
@@ -95,14 +110,14 @@ void assemble(const char *restrict asm_file_path,
 
   char *restrict line = strtok(file_content, "\n");
   int line_num = 0;
+  int temp_instr_count = 0;
+  label_count = 0;
 
   while (line != NULL) {
     line_num++;
-
-    char *restrict const comment_start = strchr(line, ';');
-    if (comment_start) {
+    char *comment_start = strchr(line, ';');
+    if (comment_start)
       *comment_start = '\0';
-    }
 
     while (*line && isspace((unsigned char)*line))
       line++;
@@ -113,45 +128,137 @@ void assemble(const char *restrict asm_file_path,
 
     char op_str[16], src1[16], src2[16], dest[16];
     if (sscanf(line, "%s %s %s %s", op_str, src1, src2, dest) != 4) {
-      fprintf(stderr, "Line %d: Invalid instruction format\n", line_num);
+      fprintf(stderr, "Line %d: invalid line format\n", line_num);
       goto cleanup;
     }
 
-    mem_instr[instr_cnt][0] = get_opcode(op_str);
-    mem_instr[instr_cnt][1] = parse_operand(src1);
-    mem_instr[instr_cnt][2] = parse_operand(src2);
-    mem_instr[instr_cnt][3] = parse_operand(dest);
+    if (strcmp(op_str, "label") == 0) {
+      if (label_count >= MAX_LABELS) {
+        fprintf(stderr, "Line %d: too many labels (max %d)\n", line_num,
+                MAX_LABELS);
+        goto cleanup;
+      }
+      for (int i = 0; i < label_count; i++) {
+        if (strcmp(labels[i].name, src1) == 0) {
+          fprintf(stderr, "Line %d: duplicate label: %s\n", line_num, src1);
+          goto cleanup;
+        }
+      }
+      strncpy(labels[label_count].name, src1, 15);
+      labels[label_count].name[15] = '\0';
+      labels[label_count].addr = temp_instr_count * 4;
+      label_count++;
+      line = strtok(NULL, "\n");
+      continue;
+    }
 
-    instr_cnt++;
+    if (strcmp(op_str, "pusha") == 0 || strcmp(op_str, "popa") == 0) {
+      temp_instr_count += REGISTER_MAX + 1;
+      line = strtok(NULL, "\n");
+      continue;
+    }
 
-    if (instr_cnt >= ASSEMBLE_MAX_SIZE) {
+    temp_instr_count++;
+    line = strtok(NULL, "\n");
+  }
+
+  fseek(asm_file, 0, SEEK_SET);
+  fread(file_content, 1, asm_file_size, asm_file);
+  line = strtok(file_content, "\n");
+  line_num = 0;
+  instr_count = 0;
+
+  while (line != NULL) {
+    line_num++;
+    char *comment_start = strchr(line, ';');
+    if (comment_start)
+      *comment_start = '\0';
+
+    while (*line && isspace((unsigned char)*line))
+      line++;
+    if (*line == '\0') {
+      line = strtok(NULL, "\n");
+      continue;
+    }
+
+    char op_str[16], src1[16], src2[16], dest[16];
+    if (sscanf(line, "%s %s %s %s", op_str, src1, src2, dest) != 4) {
+      fprintf(stderr, "Line %d: invalid line format\n", line_num);
+      goto cleanup;
+    }
+
+    if (strcmp(op_str, "label") == 0) {
+      line = strtok(NULL, "\n");
+      continue;
+    }
+
+    if (strcmp(op_str, "pusha") == 0) {
+      if (instr_count + REGISTER_MAX + 1 > ASSEMBLE_MAX_SIZE) {
+        fprintf(stderr, "Line %d: instruction buffer overflow\n", line_num);
+        goto cleanup;
+      }
+      for (int i = 0; i <= REGISTER_MAX; i++) {
+        mem_instr[instr_count][0] = get_opcode("push");
+        mem_instr[instr_count][1] = i;
+        mem_instr[instr_count][2] = 0;
+        mem_instr[instr_count][3] = 0;
+        instr_count++;
+      }
+      line = strtok(NULL, "\n");
+      continue;
+    }
+
+    if (strcmp(op_str, "popa") == 0) {
+      if (instr_count + REGISTER_MAX + 1 > ASSEMBLE_MAX_SIZE) {
+        fprintf(stderr, "Line %d: instruction buffer overflow\n", line_num);
+        goto cleanup;
+      }
+      for (int i = REGISTER_MAX; i >= 0; i--) {
+        mem_instr[instr_count][0] = get_opcode("pop");
+        mem_instr[instr_count][1] = 0;
+        mem_instr[instr_count][2] = 0;
+        mem_instr[instr_count][3] = i;
+        instr_count++;
+      }
+      line = strtok(NULL, "\n");
+      continue;
+    }
+
+    mem_instr[instr_count][0] = get_opcode(op_str);
+    mem_instr[instr_count][1] = parse_operand(src1);
+    mem_instr[instr_count][2] = parse_operand(src2);
+    mem_instr[instr_count][3] = parse_operand(dest);
+
+    instr_count++;
+
+    if (instr_count >= ASSEMBLE_MAX_SIZE) {
       fprintf(stderr, "Line %d: Maximum instruction count (%d) reached\n",
               line_num, ASSEMBLE_MAX_SIZE);
       break;
     }
 
-    if (mem_instr[instr_cnt - 1][0] == get_opcode("halt")) {
+    if (mem_instr[instr_count - 1][0] == get_opcode("halt")) {
       printf("Line %d: HALT detected, stop assembling\n", line_num);
       break;
     }
 
     line = strtok(NULL, "\n");
   }
-  if (instr_cnt == 0) {
+  if (instr_count == 0) {
     fprintf(stderr, "Error: No valid instructions found\n");
     goto cleanup;
   }
 
-  const size_t total_size = instr_cnt * INSTRUCTION_SIZE;
+  const size_t total_size = instr_count * INSTRUCTION_SIZE;
   const size_t bytes_written =
-      fwrite(mem_instr, INSTRUCTION_SIZE, instr_cnt, bin_file);
-  if (bytes_written != (size_t)instr_cnt) {
+      fwrite(mem_instr, INSTRUCTION_SIZE, instr_count, bin_file);
+  if (bytes_written != (size_t)instr_count) {
     fprintf(stderr, "Error: Failed to write binary file\n");
     goto cleanup;
   }
 
   fprintf(stdout, "Assemble completed successfully!\n");
-  fprintf(stdout, "Total instructions: %d\n", instr_cnt);
+  fprintf(stdout, "Total instructions: %d\n", instr_count);
   fprintf(stdout, "Output binary size: %zu bytes\n", total_size);
   goto cleanup;
 cleanup:

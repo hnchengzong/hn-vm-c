@@ -15,6 +15,15 @@
 #define INSTRUCTION_SIZE 4
 #endif
 
+#ifndef MAX_LABELS
+#define MAX_LABELS 100
+#endif
+
+typedef struct {
+  char name[16];
+  u16 addr;
+} Label;
+
 typedef u8 InstrBuffer[4];
 
 extern op_t get_opcode(const char *restrict name);
