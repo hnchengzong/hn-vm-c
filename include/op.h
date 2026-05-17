@@ -163,6 +163,7 @@ typedef enum {
   SHL = 0b00001010,    // 0x0A
   SHR = 0b00001011,    // 0x0B
   MOV = 0b00001100,    // 0x0C
+  SET = 0b00001101,    // 0x0D
   ALWAYS = 0b00010000, // 0x10
   EQ = 0b00010001,     // 0x11
   NEQ = 0b00010010,    // 0x12
@@ -190,15 +191,15 @@ typedef struct {
 } OpInfo;
 
 static const OpInfo op_table[] = {
-    {"nop", NOP},     {"add", ADD},       {"sub", SUB},   {"mul", MUL},
-    {"div", DIV},     {"mod", MOD},       {"and", AND},   {"or", OR},
-    {"xor", XOR},     {"not", NOT},       {"shl", SHL},   {"shr", SHR},
-    {"mov", MOV},     {"always", ALWAYS}, {"eq", EQ},     {"neq", NEQ},
-    {"lt", LT},       {"gt", GT},         {"le", LE},     {"ge", GE},
-    {"never", NEVER}, {"push", PUSH},     {"pop", POP},   {"write", WRITE},
-    {"read", READ},   {"mem", MEM},       {"disk", DISK}, {"io", IO},
-    {"stdio", STDIO}, {"call", CALL},     {"ret", RET},   {"halt", HALT},
-    {NULL, 0}};
+    {"nop", NOP},     {"add", ADD},     {"sub", SUB},       {"mul", MUL},
+    {"div", DIV},     {"mod", MOD},     {"and", AND},       {"or", OR},
+    {"xor", XOR},     {"not", NOT},     {"shl", SHL},       {"shr", SHR},
+    {"mov", MOV},     {"set", SET},     {"always", ALWAYS}, {"eq", EQ},
+    {"neq", NEQ},     {"lt", LT},       {"gt", GT},         {"le", LE},
+    {"ge", GE},       {"never", NEVER}, {"push", PUSH},     {"pop", POP},
+    {"write", WRITE}, {"read", READ},   {"mem", MEM},       {"disk", DISK},
+    {"io", IO},       {"stdio", STDIO}, {"call", CALL},     {"ret", RET},
+    {"halt", HALT},   {NULL, 0}};
 
 #ifndef OP_NUM
 #define OP_NUM (sizeof(op_table) / sizeof(op_table[0]) - 1)

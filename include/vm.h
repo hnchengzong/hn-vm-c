@@ -3,8 +3,9 @@
 #include "hn_type.h"
 #include <stdbool.h>
 
-#define MEMORY_SIZE 255
+#define MEMORY_SIZE 256
 #define REG_COUNT 16
+#define STACK_SIZE 256
 
 // 8-bit VM
 #define INSTRUCTION_SIZE 4
@@ -21,6 +22,7 @@
 
 typedef struct {
   u8 memory[MEMORY_SIZE];
+  u8 stack[STACK_SIZE];
   u8 reg[REG_COUNT];
   u8 pc;
   u8 sp;

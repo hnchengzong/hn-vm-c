@@ -7,12 +7,13 @@
 #include <string.h>
 void vm_init(vm *restrict v) {
   v->pc = VM_PC_START_ADDRESS;
-  v->sp = MEMORY_SIZE - VM_STACK_TOP_OFFSET;
+  v->sp = STACK_SIZE - VM_STACK_TOP_OFFSET;
   v->running = true;
   for (u8 i = 0; i < REG_COUNT; i++) {
     v->reg[i] = 0;
   }
   memset(v->memory, 0, MEMORY_SIZE);
+  memset(v->stack, 0, STACK_SIZE);
 }
 
 bool vm_load_program(vm *restrict v, const char *restrict filename) {
@@ -40,6 +41,9 @@ void vm_run(vm *restrict vm) {
     u8 dest = vm->memory[vm->pc + INSTRUCTION_DST];
 
     vm->pc += INSTRUCTION_SIZE;
+    if (vm->pc >= MEMORY_SIZE) {
+      vm->pc = 0;
+    }
     switch (op) {
     case NOP:
       break;
@@ -92,6 +96,9 @@ void vm_run(vm *restrict vm) {
     case MOV:
       vm->reg[dest] = vm->reg[src1] + src2;
       break;
+    case SET:
+      vm->reg[dest] = src1;
+      break;
     case ALWAYS:
       vm->pc = dest;
       break;
@@ -127,6 +134,24 @@ void vm_run(vm *restrict vm) {
       break;
     case NEVER:
       break;
+    case PUSH:
+      if (vm->sp == 0) {
+        fprintf(stderr, "stack overflow!\n");
+        vm->running = false;
+        break;
+      }
+      vm->stack[vm->sp] = vm->reg[src1];
+      vm->sp--;
+      break;
+    case POP:
+      if (vm->sp == STACK_SIZE - VM_STACK_TOP_OFFSET) {
+        fprintf(stderr, "stack underflow!\n");
+        vm->running = false;
+        break;
+      }
+      vm->sp++;
+      vm->reg[dest] = vm->stack[vm->sp];
+      break;
     case HALT:
       fprintf(stdout, "final address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);
       fprintf(stdout, "Program halted.\n");
@@ -142,8 +167,8 @@ void vm_run(vm *restrict vm) {
 
 void vm_print_registers(vm *restrict v) {
   for (u8 i = 0; i < REG_COUNT; i++) {
-    fprintf(stdout, "R%d: 0x%u\n", i, v->reg[i]);
+    fprintf(stdout, "R%d: %u\n", i, v->reg[i]);
   }
-  fprintf(stdout, "The PC: 0x%u\n", v->pc);
-  fprintf(stdout, "The SP: 0x%u\n", v->sp);
+  fprintf(stdout, "The PC: %u\n", v->pc);
+  fprintf(stdout, "The SP: %u\n", v->sp);
 }
