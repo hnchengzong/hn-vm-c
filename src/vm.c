@@ -164,13 +164,30 @@ void vm_run(vm *restrict vm) {
         vm->reg[dest] = vm->data_mem[in_offset % DATA_MEM_SIZE];
         break;
       case IO_DISK: {
-        FILE *fp = fopen(DISK_FILE_PATH, "rb");
-        if (fp) {
-          u8 off = in_offset % DISK_MAX_OFFSET;
-          fseek(fp, off, SEEK_SET);
-          fread(&vm->reg[dest], 1, 1, fp);
-          fclose(fp);
+        char disk_name[64] = {0};
+        printf("input disk name (empty = default.img): ");
+        fgets(disk_name, 64, stdin);
+
+        for (int i = 0; disk_name[i]; i++) {
+          if (disk_name[i] == ' ' || disk_name[i] == '\n')
+            disk_name[i] = 0;
         }
+
+        if (strlen(disk_name) == 0) {
+          strcpy(disk_name, DEFAULT_DISK);
+        }
+
+        FILE *fp = fopen(disk_name, "rb");
+        if (!fp) {
+          fprintf(stderr, "disk open failed\n");
+          vm->running = false;
+          break;
+        }
+
+        u8 off = in_offset % DISK_MAX_OFFSET;
+        fseek(fp, off, SEEK_SET);
+        fread(&vm->reg[dest], 1, 1, fp);
+        fclose(fp);
         break;
       }
       case IO_STDIN:
@@ -196,18 +213,36 @@ void vm_run(vm *restrict vm) {
         vm->data_mem[out_offset % DATA_MEM_SIZE] = vm->reg[dest];
         break;
       case IO_DISK: {
-        FILE *fp = fopen(DISK_FILE_PATH, "r+b");
-        if (!fp)
-          fp = fopen(DISK_FILE_PATH, "wb");
-        if (fp) {
-          u8 off = out_offset % DISK_MAX_OFFSET;
-          fseek(fp, off, SEEK_SET);
-          u8 dat = vm->reg[dest];
-          fwrite(&dat, 1, 1, fp);
-          fclose(fp);
+        char disk_name[64] = {0};
+        printf("input disk name (empty = default.img): ");
+        fgets(disk_name, 64, stdin);
+
+        for (int i = 0; disk_name[i]; i++) {
+          if (disk_name[i] == ' ' || disk_name[i] == '\n')
+            disk_name[i] = 0;
         }
+
+        if (strlen(disk_name) == 0) {
+          strcpy(disk_name, DEFAULT_DISK);
+        }
+
+        FILE *fp = fopen(disk_name, "r+b");
+        if (!fp)
+          fp = fopen(disk_name, "wb");
+        if (!fp) {
+          fprintf(stderr, "disk create failed\n");
+          vm->running = false;
+          break;
+        }
+
+        u8 off = out_offset % DISK_MAX_OFFSET;
+        fseek(fp, off, SEEK_SET);
+        u8 dat = vm->reg[dest];
+        fwrite(&dat, 1, 1, fp);
+        fclose(fp);
         break;
       }
+
       case IO_STDOUT:
         if (out_offset == 0) {
           fprintf(stdout, "%c", vm->reg[dest]);

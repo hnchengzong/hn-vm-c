@@ -29,7 +29,7 @@
 #define IO_EXT 4
 
 // disk
-#define DISK_FILE_PATH "./data/disk0.bin"
+#define DEFAULT_DISK "./data/disk0.bin"
 #define DISK_MAX_OFFSET 255
 
 typedef struct {
