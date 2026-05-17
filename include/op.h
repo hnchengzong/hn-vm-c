@@ -176,10 +176,6 @@ typedef enum {
   POP = 0b00011001,    // 0x19
   WRITE = 0b00100000,  // 0x20
   READ = 0b00100001,   // 0x21
-  MEM = 0b00000000,    // 0x00
-  DISK = 0b00110000,   // 0x30
-  IO = 0b00101000,     // 0x28
-  STDIO = 0b00101100,  // 0x2C
   CALL = 0b01000000,   // 0x40
   RET = 0b01000001,    // 0x41
   HALT = 0b10000000    // 0x80
@@ -197,8 +193,7 @@ static const OpInfo op_table[] = {
     {"mov", MOV},     {"set", SET},     {"always", ALWAYS}, {"eq", EQ},
     {"neq", NEQ},     {"lt", LT},       {"gt", GT},         {"le", LE},
     {"ge", GE},       {"never", NEVER}, {"push", PUSH},     {"pop", POP},
-    {"write", WRITE}, {"read", READ},   {"mem", MEM},       {"disk", DISK},
-    {"io", IO},       {"stdio", STDIO}, {"call", CALL},     {"ret", RET},
+    {"write", WRITE}, {"read", READ},   {"call", CALL},     {"ret", RET},
     {"halt", HALT},   {NULL, 0}};
 
 #ifndef OP_NUM

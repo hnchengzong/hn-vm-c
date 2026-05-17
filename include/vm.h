@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #define MEMORY_SIZE 256
+#define DATA_MEM_SIZE 256
 #define REG_COUNT 16
 #define STACK_SIZE 256
 
@@ -20,8 +21,20 @@
 #define VM_PC_START_ADDRESS 0
 #define VM_STACK_TOP_OFFSET 1
 
+// I/O
+#define IO_MEM 0
+#define IO_DISK 1
+#define IO_STDIN 2
+#define IO_STDOUT 3
+#define IO_EXT 4
+
+// disk
+#define DISK_FILE_PATH "./data/disk0.bin"
+#define DISK_MAX_OFFSET 255
+
 typedef struct {
-  u8 memory[MEMORY_SIZE];
+  u8 program_mem[MEMORY_SIZE];
+  u8 data_mem[DATA_MEM_SIZE];
   u8 stack[STACK_SIZE];
   u8 reg[REG_COUNT];
   u8 pc;
@@ -34,3 +47,5 @@ extern void vm_run(vm *restrict v);
 extern void vm_load_test_program(vm *restrict v);
 extern bool vm_load_program(vm *restrict v, const char *restrict filename);
 extern void vm_print_registers(vm *restrict v);
+extern void vm_print_memory(vm *restrict v);
+extern void vm_print_stack(vm *restrict v);
