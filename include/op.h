@@ -178,7 +178,8 @@ typedef enum {
   READ = 0b00100001,   // 0x21
   CALL = 0b01000000,   // 0x40
   RET = 0b01000001,    // 0x41
-  HALT = 0b10000000    // 0x80
+  HALT = 0b10000000,   // 0x80
+  END = 0b11111111     // 0xFF
 } OpCode;
 
 typedef struct {
@@ -194,7 +195,8 @@ static const OpInfo op_table[] = {
     {"neq", NEQ},     {"lt", LT},       {"gt", GT},         {"le", LE},
     {"ge", GE},       {"never", NEVER}, {"push", PUSH},     {"pop", POP},
     {"write", WRITE}, {"read", READ},   {"call", CALL},     {"ret", RET},
-    {"halt", HALT},   {NULL, 0}};
+    {"halt", HALT},   {"end", END},     {NULL, 0},
+};
 
 #ifndef OP_NUM
 #define OP_NUM (sizeof(op_table) / sizeof(op_table[0]) - 1)

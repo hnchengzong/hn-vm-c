@@ -8,3 +8,4 @@ ret nop nop nop
 
 label end nop nop
 halt nop nop nop
+end 0 0 0

@@ -28,7 +28,7 @@ typedef u8 InstrBuffer[4];
 
 extern op_t get_opcode(const char *restrict name);
 
-extern u8 parse_operand(const char *restrict str);
+extern u8 parse_op(const char *restrict str);
 
 void assemble(const char *restrict asm_file_path,
               const char *restrict bin_file_path);

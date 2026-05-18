@@ -286,6 +286,10 @@ void vm_run(vm *restrict vm) {
       fprintf(stdout, "final address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);
       fprintf(stdout, "Program halted.\n");
       vm->running = false;
+    case END:
+      fprintf(stdout, "final address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);
+      fprintf(stdout, "Program halted.\n");
+      vm->running = false;
       return;
     default:
       fprintf(stderr, "address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);

@@ -16,7 +16,7 @@ A virtual machine and a corresponding assembler written in C, built with xmake. 
 - Stack: `push`, `pop` (`0x18`, `0x19`)
 - I/O: `read`, `write` (`0x20`, `0x21`)
 - Function calls: `call`, `ret` (`0x40`, `0x41`)
-- Halt: `halt` — stops the program and exits. (`0x80`)
+- Halt: `halt`,`end` — stops the program and exits,They are equivalent on the virtual machine. (`0x80`, `0xff`)
 
 ### Sources / Destinations
 
@@ -55,7 +55,7 @@ When interacting with the virtual disk, you need to provide a filename; the file
 8. `call` format: `call nop nop target_address`. It pushes the address of the next instruction onto the stack and jumps to the target address. Example: `call nop nop 0x20` jumps to address `0x20` and saves the return address.
    `ret` format: `ret nop nop nop`. It pops the return address from the stack into `pc`, performing a function return.
 
-9. The `halt` instruction terminates the program. Every program should end with a `halt`; otherwise, when `pc` reaches the end of program memory, an abnormal exit occurs. The assembler also stops processing code after encountering `halt`.
+9. The `halt` instruction terminates the program，and need to meet four-byte alignment. Every program should end with a `halt`; otherwise, when `pc` reaches the end of program memory, an abnormal exit occurs.`end` is also equivalent to `halt`, but the assembler will no longer assemble the following code after encountering `end`. Therefore, you can only write `end` at the end during assembly, and `halt` can be placed in the middle.
 
 ## Data Width and Memory Size
 
@@ -66,7 +66,7 @@ The VM currently supports only 8-bit registers. Program memory holds at most 64 
 The assembler converts mnemonics like `add` and `r0` into their corresponding `u8` values. Text after `;` is treated as a comment. The assembler automatically skips whitespace and assembles line by line (separated by `\n`) in 4-byte blocks. Labels are supported: `label lab1 nop nop` does not occupy program space; a later `call nop nop lab1` will jump to the location of `lab1`.
 `popa nop nop nop` and `pusha nop nop nop` are macros that automatically push all registers onto the stack or pop all registers from the stack, respectively.
 
-When the assembler runs, the first pass removes comments and empty lines and checks for 4-byte alignment (except for labels and macros). The second pass expands macros and translates assembly instructions into binary machine code. Mnemonics like `nop` and `null` are directly written as `0`. The assembler stops processing any code after encountering `halt`, so `halt` must be placed at the very end.
+When the assembler runs, the first pass removes comments and empty lines and checks for 4-byte alignment (except for labels and macros). The second pass expands macros and translates assembly instructions into binary machine code. Mnemonics like `nop` and `null` are directly written as `0`. The assembler stops processing any code after encountering `end`, so `end` must be placed at the very end.
 
 ## Running (requires xmake)
 

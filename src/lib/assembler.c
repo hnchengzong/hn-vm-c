@@ -46,7 +46,7 @@ op_t get_opcode(const char *restrict name) {
   return OP_NUM;
 }
 
-u8 parse_operand(const char *restrict str) {
+u8 parse_op(const char *restrict str) {
   if (strcmp(str, "nop") == 0 || strcmp(str, "null") == 0 ||
       strcmp(str, "nil") == 0 || strcmp(str, "none") == 0) {
     return 0;
@@ -187,6 +187,11 @@ void assemble(const char *restrict asm_file_path,
       goto cleanup;
     }
 
+    if (mem_instr[instr_count - 1][0] == get_opcode("end")) {
+      printf("Line %d: detect 'end', stop assembling\n", line_num);
+      break;
+    }
+
     if (strcmp(op_str, "label") == 0) {
       line = strtok(NULL, "\n");
       continue;
@@ -225,20 +230,15 @@ void assemble(const char *restrict asm_file_path,
     }
 
     mem_instr[instr_count][0] = get_opcode(op_str);
-    mem_instr[instr_count][1] = parse_operand(src1);
-    mem_instr[instr_count][2] = parse_operand(src2);
-    mem_instr[instr_count][3] = parse_operand(dest);
+    mem_instr[instr_count][1] = parse_op(src1);
+    mem_instr[instr_count][2] = parse_op(src2);
+    mem_instr[instr_count][3] = parse_op(dest);
 
     instr_count++;
 
     if (instr_count >= ASSEMBLE_MAX_SIZE) {
       fprintf(stderr, "Line %d: Maximum instruction count (%d) reached\n",
               line_num, ASSEMBLE_MAX_SIZE);
-      break;
-    }
-
-    if (mem_instr[instr_count - 1][0] == get_opcode("halt")) {
-      printf("Line %d: HALT detected, stop assembling\n", line_num);
       break;
     }
 

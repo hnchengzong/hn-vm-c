@@ -21,3 +21,4 @@ popa nop nop nop
 write 3 2 nop
 
 halt nop nop nop
+end 0 0 0

@@ -4,3 +4,4 @@ read 0 0 r1
 write 3 0 r1
 write 3 1 r1
 halt nop nop nop
+end 0 0 0

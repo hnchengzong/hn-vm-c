@@ -7,3 +7,4 @@ set 1 nop r2
 write 3 1 r2
 label end nop nop
 halt nop nop nop
+end 0 0 0
