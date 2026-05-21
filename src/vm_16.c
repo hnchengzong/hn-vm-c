@@ -1,48 +1,45 @@
-#include "vm.h"
+#include "vm_16.h"
 
 #include "hn_type.h"
 #include "op.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-void vm_init(vm *restrict v) {
-  v->pc = VM_PC_START_ADDRESS;
-  v->sp = STACK_SIZE - VM_STACK_TOP_OFFSET;
+
+void vm_16_init(vm_16 *restrict v) {
+  v->pc = VM_16_PC_START_ADDRESS;
+  v->sp = VM_16_STACK_SIZE - VM_16_STACK_TOP_OFFSET;
   v->running = true;
-  for (u8 i = 0; i < REG_COUNT; i++) {
+  for (u16 i = 0; i < VM_16_REG_COUNT; i++) {
     v->reg[i] = 0;
   }
-  memset(v->program_mem, 0, MEMORY_SIZE);
-  memset(v->data_mem, 0, DATA_MEM_SIZE);
-  memset(v->stack, 0, STACK_SIZE);
+  memset(v->program_mem, 0, VM_16_MEMORY_SIZE * sizeof(u16));
+  memset(v->data_mem, 0, VM_16_DATA_MEM_SIZE * sizeof(u16));
+  memset(v->stack, 0, VM_16_STACK_SIZE * sizeof(u16));
 }
 
-bool vm_load_program(vm *restrict v, const char *restrict filename) {
+bool vm_16_load_program(vm_16 *restrict v, const char *restrict filename) {
   FILE *fp = fopen(filename, "rb");
   if (fp == NULL) {
     fprintf(stderr, "Failed to open file: %s.\n", filename);
     return false;
   }
-  size_t read_bytes = fread(v->program_mem, 1, MEMORY_SIZE, fp);
-  if (read_bytes > MEMORY_SIZE) {
-    fprintf(stderr, "Failed to read program: %s.It's too large.\n", filename);
-    fclose(fp);
-    return false;
-  }
-  fprintf(stdout, "Loaded %zu bytes from %s.\n", read_bytes, filename);
+  size_t read_units = fread(v->program_mem, sizeof(u16), VM_16_MEMORY_SIZE, fp);
+  fprintf(stdout, "Loaded %zu bytes from %s.\n", read_units * sizeof(u16),
+          filename);
   fclose(fp);
   return true;
 }
 
-void vm_run(vm *restrict vm) {
+void vm_16_run(vm_16 *restrict vm) {
   while (vm->running == true) {
-    u8 op = vm->program_mem[vm->pc + INSTRUCTION_OP];
-    u8 src1 = vm->program_mem[vm->pc + INSTRUCTION_SRC1];
-    u8 src2 = vm->program_mem[vm->pc + INSTRUCTION_SRC2];
-    u8 dest = vm->program_mem[vm->pc + INSTRUCTION_DEST];
+    u16 op = vm->program_mem[vm->pc + VM_16_INSTRUCTION_OP];
+    u16 src1 = vm->program_mem[vm->pc + VM_16_INSTRUCTION_SRC1];
+    u16 src2 = vm->program_mem[vm->pc + VM_16_INSTRUCTION_SRC2];
+    u16 dest = vm->program_mem[vm->pc + VM_16_INSTRUCTION_DEST];
 
-    vm->pc += INSTRUCTION_SIZE;
-    if (vm->pc >= MEMORY_SIZE) {
+    vm->pc += VM_16_INSTRUCTION_SIZE;
+    if (vm->pc >= VM_16_MEMORY_SIZE) {
       fprintf(stderr, "Program end.\n");
       vm->running = false;
       return;
@@ -62,7 +59,7 @@ void vm_run(vm *restrict vm) {
       break;
     case DIV:
       if (vm->reg[src2] == 0) {
-        fprintf(stderr, "address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);
+        fprintf(stderr, "address: 0x%04x.\n", vm->pc - VM_16_INSTRUCTION_SIZE);
         fprintf(stderr, "Division by zero.\n");
         vm->running = false;
         return;
@@ -71,7 +68,7 @@ void vm_run(vm *restrict vm) {
       break;
     case MOD:
       if (vm->reg[src2] == 0) {
-        fprintf(stderr, "address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);
+        fprintf(stderr, "address: 0x%04x.\n", vm->pc - VM_16_INSTRUCTION_SIZE);
         fprintf(stderr, "Modulo by zero.\n");
         vm->running = false;
         return;
@@ -88,14 +85,15 @@ void vm_run(vm *restrict vm) {
       vm->reg[dest] = vm->reg[src1] ^ vm->reg[src2];
       break;
     case NOT:
-      vm->reg[dest] = ~vm->reg[src1] & UINT8_VALUE_MASK;
-      ;
+      vm->reg[dest] = ~vm->reg[src1] & VM_16_UINT16_VALUE_MASK;
       break;
     case SHL:
-      vm->reg[dest] = vm->reg[src1] << (vm->reg[src2] % REGISTER_BIT_WIDTH);
+      vm->reg[dest] = vm->reg[src1]
+                      << (vm->reg[src2] % VM_16_REGISTER_BIT_WIDTH);
       break;
     case SHR:
-      vm->reg[dest] = vm->reg[src1] >> (vm->reg[src2] % REGISTER_BIT_WIDTH);
+      vm->reg[dest] =
+          vm->reg[src1] >> (vm->reg[src2] % VM_16_REGISTER_BIT_WIDTH);
       break;
     case MOV:
       vm->reg[dest] = vm->reg[src1] + src2;
@@ -148,7 +146,7 @@ void vm_run(vm *restrict vm) {
       vm->sp--;
       break;
     case POP:
-      if (vm->sp == STACK_SIZE - VM_STACK_TOP_OFFSET) {
+      if (vm->sp == VM_16_STACK_SIZE - VM_16_STACK_TOP_OFFSET) {
         fprintf(stderr, "stack underflow!\n");
         vm->running = false;
         break;
@@ -157,13 +155,13 @@ void vm_run(vm *restrict vm) {
       vm->reg[dest] = vm->stack[vm->sp];
       break;
     case READ:
-      u8 in_type = src1;
-      u8 in_offset = src2;
+      u16 in_type = src1;
+      u16 in_offset = src2;
       switch (in_type) {
-      case IO_MEM:
-        vm->reg[dest] = vm->data_mem[in_offset % DATA_MEM_SIZE];
+      case VM_16_IO_MEM:
+        vm->reg[dest] = vm->data_mem[in_offset % VM_16_DATA_MEM_SIZE];
         break;
-      case IO_DISK: {
+      case VM_16_IO_DISK: {
         char disk_name[64] = {0};
         printf("input disk name (empty = default.img): ");
         fgets(disk_name, 64, stdin);
@@ -174,7 +172,7 @@ void vm_run(vm *restrict vm) {
         }
 
         if (strlen(disk_name) == 0) {
-          strcpy(disk_name, DEFAULT_DISK);
+          strcpy(disk_name, VM_16_DEFAULT_DISK);
         }
 
         FILE *fp = fopen(disk_name, "rb");
@@ -184,34 +182,34 @@ void vm_run(vm *restrict vm) {
           break;
         }
 
-        u8 off = in_offset % DISK_MAX_OFFSET;
-        fseek(fp, off, SEEK_SET);
-        fread(&vm->reg[dest], 1, 1, fp);
+        u16 off = in_offset % VM_16_DISK_MAX_OFFSET;
+        fseek(fp, off * sizeof(u16), SEEK_SET);
+        fread(&vm->reg[dest], sizeof(u16), 1, fp);
         fclose(fp);
         break;
       }
-      case IO_STDIN:
+      case VM_16_IO_STDIN:
         if (in_offset == 0) {
           vm->reg[dest] = getchar();
         } else if (in_offset == 1) {
-          vm->data_mem[dest % DATA_MEM_SIZE] = getchar();
+          vm->data_mem[dest % VM_16_DATA_MEM_SIZE] = getchar();
         } else {
           vm->running = false;
-          fprintf(stderr, "Unknown offset: 0x%02x.\n", in_offset);
+          fprintf(stderr, "Unknown offset: 0x%04x.\n", in_offset);
         }
         break;
-      case IO_EXT:
+      case VM_16_IO_EXT:
         break;
       }
       break;
     case WRITE:
-      u8 out_type = src1;
-      u8 out_offset = src2;
+      u16 out_type = src1;
+      u16 out_offset = src2;
       switch (out_type) {
-      case IO_MEM:
-        vm->data_mem[out_offset % DATA_MEM_SIZE] = vm->reg[dest];
+      case VM_16_IO_MEM:
+        vm->data_mem[out_offset % VM_16_DATA_MEM_SIZE] = vm->reg[dest];
         break;
-      case IO_DISK: {
+      case VM_16_IO_DISK: {
         char disk_name[64] = {0};
         printf("input disk name (empty = default.img): ");
         fgets(disk_name, 64, stdin);
@@ -222,7 +220,7 @@ void vm_run(vm *restrict vm) {
         }
 
         if (strlen(disk_name) == 0) {
-          strcpy(disk_name, DEFAULT_DISK);
+          strcpy(disk_name, VM_16_DEFAULT_DISK);
         }
 
         FILE *fp = fopen(disk_name, "r+b");
@@ -234,31 +232,31 @@ void vm_run(vm *restrict vm) {
           break;
         }
 
-        u8 off = out_offset % DISK_MAX_OFFSET;
-        fseek(fp, off, SEEK_SET);
-        u8 dat = vm->reg[dest];
-        fwrite(&dat, 1, 1, fp);
+        u16 off = out_offset % VM_16_DISK_MAX_OFFSET;
+        fseek(fp, off * sizeof(u16), SEEK_SET);
+        u16 dat = vm->reg[dest];
+        fwrite(&dat, sizeof(u16), 1, fp);
         fclose(fp);
         break;
       }
 
-      case IO_STDOUT:
+      case VM_16_IO_STDOUT:
         if (out_offset == 0) {
           fprintf(stdout, "%c", vm->reg[dest]);
         } else if (out_offset == 1) {
           fprintf(stderr, "%d\n", vm->reg[dest]);
         } else if (out_offset == 2) {
-          vm_print_registers(vm);
+          vm_16_print_registers(vm);
         } else if (out_offset == 3) {
-          vm_print_memory(vm);
+          vm_16_print_memory(vm);
         } else if (out_offset == 4) {
-          vm_print_stack(vm);
+          vm_16_print_stack(vm);
         } else {
           vm->running = false;
-          fprintf(stderr, "Unknown offset: 0x%02x.\n", out_offset);
+          fprintf(stderr, "Unknown offset: 0x%04x.\n", out_offset);
         }
         break;
-      case IO_EXT:
+      case VM_16_IO_EXT:
         break;
       }
       break;
@@ -268,12 +266,12 @@ void vm_run(vm *restrict vm) {
         vm->running = false;
         break;
       }
-      vm->stack[vm->sp] = vm->pc + INSTRUCTION_SIZE;
+      vm->stack[vm->sp] = vm->pc + VM_16_INSTRUCTION_SIZE;
       vm->sp--;
       vm->pc = dest;
       break;
     case RET:
-      if (vm->sp >= STACK_SIZE - VM_STACK_TOP_OFFSET) {
+      if (vm->sp >= VM_16_STACK_SIZE - VM_16_STACK_TOP_OFFSET) {
         fprintf(stderr, "function's stack underflow!\n");
         vm->running = false;
         break;
@@ -283,50 +281,52 @@ void vm_run(vm *restrict vm) {
       break;
 
     case HALT:
-      fprintf(stdout, "final address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);
+      fprintf(stdout, "final address: 0x%04x.\n",
+              vm->pc - VM_16_INSTRUCTION_SIZE);
       fprintf(stdout, "Program halted.\n");
       vm->running = false;
-      return;
+      break;
     case END:
-      fprintf(stdout, "final address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);
+      fprintf(stdout, "final address: 0x%04x.\n",
+              vm->pc - VM_16_INSTRUCTION_SIZE);
       fprintf(stdout, "Program halted.\n");
       vm->running = false;
       return;
     default:
-      fprintf(stderr, "address: 0x%02x.\n", vm->pc - INSTRUCTION_SIZE);
-      fprintf(stderr, "Unknown opcode: 0x%02x.\n", op);
+      fprintf(stderr, "address: 0x%04x.\n", vm->pc - VM_16_INSTRUCTION_SIZE);
+      fprintf(stderr, "Unknown opcode: 0x%04x.\n", op);
       vm->running = false;
     }
   }
 }
 
-void vm_print_registers(vm *restrict v) {
-  for (u8 i = 0; i < REG_COUNT; i++) {
+void vm_16_print_registers(vm_16 *restrict v) {
+  for (u16 i = 0; i < VM_16_REG_COUNT; i++) {
     fprintf(stdout, "R%d: %u\n", i, v->reg[i]);
   }
   fprintf(stdout, "The PC: %u\n", v->pc);
   fprintf(stdout, "The SP: %u\n", v->sp);
 }
 
-void vm_print_memory(vm *restrict v) {
+void vm_16_print_memory(vm_16 *restrict v) {
   printf("\n===== Memory =====\n");
-  for (int i = 0; i < DATA_MEM_SIZE; i++) {
+  for (int i = 0; i < VM_16_DATA_MEM_SIZE; i++) {
     if (i % 16 == 0)
       printf("\n%3u: ", i);
-    printf("%3u ", v->data_mem[i]);
+    printf("%5u ", v->data_mem[i]);
   }
   printf("\n==================\n");
 }
 
-void vm_print_stack(vm *restrict v) {
+void vm_16_print_stack(vm_16 *restrict v) {
   printf("\n===== Stack =====\n");
-  for (int i = 0; i < STACK_SIZE; i++) {
+  for (int i = 0; i < VM_16_STACK_SIZE; i++) {
     if (i % 16 == 0)
       printf("\n%3u: ", i);
     if (i == v->sp)
-      printf("[%3u] ", v->stack[i]);
+      printf("[%5u] ", v->stack[i]);
     else
-      printf("%3u ", v->stack[i]);
+      printf("%5u ", v->stack[i]);
   }
   printf("\n=================\n");
 }

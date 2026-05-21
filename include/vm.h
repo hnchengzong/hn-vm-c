@@ -13,7 +13,7 @@
 #define INSTRUCTION_OP 0
 #define INSTRUCTION_SRC1 1
 #define INSTRUCTION_SRC2 2
-#define INSTRUCTION_DST 3
+#define INSTRUCTION_DEST 3
 #define REGISTER_BIT_WIDTH 8  // (op "shl,shr" use)
 #define UINT8_VALUE_MASK 0xFF //(op "not" use)
 

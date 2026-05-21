@@ -59,7 +59,8 @@ When interacting with the virtual disk, you need to provide a filename; the file
 
 ## Data Width and Memory Size
 
-The VM currently supports only 8-bit registers. Program memory holds at most 64 instructions (256 bytes). The stack, data memory, and disk space are each 256 bytes. Every instruction is exactly 4 bytes long.
+- 8-bit mode: Maximum capacity of 64 instructions. The stack, data memory and disk storage are all 256 bytes in size. Each instruction takes exactly 4 bytes.
+- 16-bit mode: All registers operate at 16-bit width. The stack, data memory and disk storage each offer 65536 bytes of space. Each instruction takes exactly 8 bytes.
 
 ## Assembler
 
